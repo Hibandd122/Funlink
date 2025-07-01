@@ -11,40 +11,26 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like 
 KEYWORD_TEXT = "Caraworld Cam Ranh"
 KEYWORD_ID = "7043c47f-9807-4ee5-b78f-406b1a56b477"
 
-pending = {}
-
 @app.route("/", methods=["POST"])
-def create_rid():
+def handle_request():
     url = request.json.get("url")
     if not url or "funlink.io" not in url:
         return jsonify({"error": "Invalid link"}), 400
 
     rid = str(uuid.uuid4())
     link_id = url.strip("/").split("/")[-1]
-    start_time = time.time()
-
-    pending[rid] = {"start": start_time, "link_id": link_id}
 
     try:
         requests.options(f"{API}code/ch", headers={"rid": rid}, timeout=10)
     except Exception as e:
         return jsonify({"error": f"OPTIONS failed: {str(e)}"}), 500
 
-    return jsonify({"rid": rid})
+    print(f"[🟡] Waiting 45s for RID: {rid}")
+    for i in range(45, 0, -1):
+        print(f"\r⏳ {i:02d}s remaining...", end="", flush=True)
+        time.sleep(1)
+    print("\n[▶️] Sending code/code")
 
-
-@app.route("/<rid>", methods=["POST"])
-def check_rid(rid):
-    entry = pending.get(rid)
-    if not entry:
-        return jsonify({"error": "RID not found"}), 404
-
-    elapsed = time.time() - entry["start"]
-    time_left = max(0, 45 - int(elapsed))
-    if time_left > 0:
-        return jsonify({"timeleft": time_left})
-
-    link_id = entry["link_id"]
     headers = {
         "referer": DEST,
         "rid": rid,
@@ -89,7 +75,6 @@ def check_rid(rid):
         if not final_url:
             return jsonify({"error": "No final URL"}), 500
 
-        pending.pop(rid, None)  # Xoá sau khi xong
         return jsonify({"redirect": final_url})
 
     except Exception as e:
