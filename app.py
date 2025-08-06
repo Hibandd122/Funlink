@@ -41,10 +41,12 @@ def create_payload():
     }
 
 def trigger_code(rid):
+    print(f"[Thread] Bắt đầu xử lý RID: {rid}")
     headers = {**HEADERS_TEMPLATE, "rid": rid}
     try:
         # Gửi yêu cầu OPTIONS
         resp = requests.options(API_BASE + "code/ch", headers=headers, timeout=10)
+        print(f"[Thread] OPTIONS status: {resp.status_code}")
         with lock:
             if resp.status_code != 200:
                 rid_status[rid] = {"status": "error", "message": f"Request failed with status {resp.status_code}", "created_at": time.time()}
@@ -52,18 +54,21 @@ def trigger_code(rid):
 
         # Đếm ngược 50s
         for i in range(50, -1, -1):  # Đếm từ 50 xuống 0
+            print(f"[Thread] RID: {rid} - time_left: {i}")
             with lock:
                 rid_status[rid] = {"status": "waiting", "time_left": i, "created_at": time.time()}
             time.sleep(1)
 
         # Lấy mã code
         code_data = requests.post(API_BASE + "code/code", headers=headers, json=create_payload(), timeout=10)
+        print(f"[Thread] POST code response: {code_data.status_code}")
         with lock:
             if code_data.status_code == 200:
                 rid_status[rid] = {"status": "success", "code": code_data.json().get("code"), "created_at": time.time()}
             else:
                 rid_status[rid] = {"status": "error", "message": f"Failed to fetch code, status {code_data.status_code}", "created_at": time.time()}
     except Exception as e:
+        print(f"[Thread] Lỗi xảy ra: {e}")
         with lock:
             rid_status[rid] = {"status": "error", "message": str(e), "created_at": time.time()}
 
@@ -72,6 +77,7 @@ def get_task():
     rid = generate_rid()
     with lock:
         rid_status[rid] = {"status": "waiting", "time_left": 50, "created_at": time.time()}
+    print(f"[API] Tạo RID mới: {rid}")
     threading.Thread(target=trigger_code, args=(rid,), daemon=True).start()
     return jsonify({"rid": rid})
 
@@ -106,4 +112,3 @@ def cleanup_rid_status():
 
 # Khởi động thread dọn dẹp
 threading.Thread(target=cleanup_rid_status, daemon=True).start()
-
