@@ -47,31 +47,31 @@ def trigger_code(rid):
         resp = requests.options(API_BASE + "code/ch", headers=headers, timeout=10)
         with lock:
             if resp.status_code != 200:
-                rid_status[rid] = {"status": "error", "message": f"Request failed with status {resp.status_code}"}
+                rid_status[rid] = {"status": "error", "message": f"Request failed with status {resp.status_code}", "created_at": time.time()}
                 return
 
-        # Đợi 50s
-        for i in range(50, 0, -1):
+        # Đếm ngược 50s
+        for i in range(50, -1, -1):  # Đếm từ 50 xuống 0
             with lock:
-                rid_status[rid] = {"status": "waiting", "time_left": i}
+                rid_status[rid] = {"status": "waiting", "time_left": i, "created_at": time.time()}
             time.sleep(1)
 
         # Lấy mã code
         code_data = requests.post(API_BASE + "code/code", headers=headers, json=create_payload(), timeout=10)
         with lock:
             if code_data.status_code == 200:
-                rid_status[rid] = {"status": "success", "code": code_data.json().get("code")}
+                rid_status[rid] = {"status": "success", "code": code_data.json().get("code"), "created_at": time.time()}
             else:
-                rid_status[rid] = {"status": "error", "message": f"Failed to fetch code, status {code_data.status_code}"}
+                rid_status[rid] = {"status": "error", "message": f"Failed to fetch code, status {code_data.status_code}", "created_at": time.time()}
     except Exception as e:
         with lock:
-            rid_status[rid] = {"status": "error", "message": str(e)}
+            rid_status[rid] = {"status": "error", "message": str(e), "created_at": time.time()}
 
 @app.route('/gettask', methods=['POST'])
 def get_task():
     rid = generate_rid()
     with lock:
-        rid_status[rid] = {"status": "waiting", "time_left": 50}
+        rid_status[rid] = {"status": "waiting", "time_left": 50, "created_at": time.time()}
     threading.Thread(target=trigger_code, args=(rid,), daemon=True).start()
     return jsonify({"rid": rid})
 
@@ -81,22 +81,19 @@ def check_task():
     with lock:
         if not rid or rid not in rid_status:
             return jsonify({"status": "error", "message": "Invalid or missing rid"}), 400
-
         status = rid_status[rid]
+    
     if status["status"] == "waiting":
         return jsonify({"status": "waiting", "time_left": status["time_left"]})
     elif status["status"] == "success":
-        # Xóa RID sau khi trả về thành công để tránh lưu trữ lâu dài
         with lock:
-            rid_status.pop(rid, None)
-        return jsonify({"status": "success", "code": status["code"]})
+            code = status["code"]
+            rid_status.pop(rid, None)  # Xóa RID sau khi trả về thành công
+        return jsonify({"status": "success", "code": code})
     else:
-        # Xóa RID nếu có lỗi
         with lock:
-            rid_status.pop(rid, None)
+            rid_status.pop(rid, None)  # Xóa RID nếu có lỗi
         return jsonify({"status": "error", "message": status["message"]})
-
-# Tự động xóa các RID cũ sau một thời gian
 def cleanup_rid_status():
     while True:
         with lock:
