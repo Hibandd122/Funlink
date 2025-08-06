@@ -110,5 +110,3 @@ def cleanup_rid_status():
 # Khởi động thread dọn dẹp
 threading.Thread(target=cleanup_rid_status, daemon=True).start()
 
-if __name__ == '__main__':
-    app.run(debug=True)
