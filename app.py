@@ -3,9 +3,9 @@ import uuid
 from flask import Flask, request, jsonify
 import time
 import threading
-
+from flask_cors import CORS
 app = Flask(__name__)
-
+CORS(app)
 API_BASE = 'https://public.funlink.io/api/'
 ORIGIN = 'https://88bet.hiphop'
 HEADERS_TEMPLATE = {
