@@ -12,9 +12,22 @@ API_BASE = 'https://public.funlink.io/api/'
 ORIGIN = 'https://88bet.hiphop'
 HEADERS_TEMPLATE = {
     "Content-Type": "application/json",
-    "Referer": ORIGIN,
-    "Origin": ORIGIN
+    "Accept": "*/*",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Accept-Language": "vi,en;q=0.9",
+    "Cache-Control": "max-age=0",
+    "Origin": ORIGIN,
+    "Priority": "u=1, i",
+    "Referer": ORIGIN + "/",  # đảm bảo có dấu /
+    "Sec-CH-UA": '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
+    "Sec-CH-UA-Mobile": "?0",
+    "Sec-CH-UA-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "cross-site",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
 }
+
 
 # Lưu trữ trạng thái các rid
 rid_status = {}
